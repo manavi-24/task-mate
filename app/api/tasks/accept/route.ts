@@ -1,62 +1,82 @@
-import { getServerSession } from "next-auth";
+// app/api/tasks/accept/route.ts
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/firebaseAdmin";
+import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-
-  const userEmail = session?.user?.email;
-
-  if (!userEmail) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { taskId } = await req.json();
-
-  if (!taskId) {
-    return NextResponse.json({ error: "Task ID required" }, { status: 400 });
-  }
-
-  const taskRef = db.collection("tasks").doc(taskId);
-
   try {
-    await db.runTransaction(async (tx) => {
-      const snap = await tx.get(taskRef);
+    console.log("🔥 ACCEPT TASK API HIT");
 
-      if (!snap.exists) {
-        throw new Error("Task not found");
-      }
+    const session = await getServerSession(authOptions);
 
-      const task = snap.data();
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
-      if (task?.status !== "open") {
-        throw new Error("Task is not open");
-      }
+    const { taskId } = await req.json();
+    if (!taskId) {
+      return NextResponse.json(
+        { error: "Task ID required" },
+        { status: 400 }
+      );
+    }
 
-      if (task.createdBy?.email === userEmail) {
-        throw new Error("Cannot accept your own task");
-      }
+    const taskRef = db.collection("tasks").doc(taskId);
+    const snap = await taskRef.get();
 
-      if (task.acceptedBy) {
-        throw new Error("Task already accepted");
-      }
+    if (!snap.exists) {
+      return NextResponse.json(
+        { error: "Task not found" },
+        { status: 404 }
+      );
+    }
 
-      tx.update(taskRef, {
-        status: "accepted",
-        acceptedBy: {
-          email: userEmail,
-          name: session.user?.name ?? "",
-        },
-        acceptedAt: new Date(),
-      });
+    const taskData = snap.data();
+    if (!taskData) {
+      return NextResponse.json(
+        { error: "Invalid task data" },
+        { status: 500 }
+      );
+    }
+
+    // ❌ Creator cannot accept own task
+    if (taskData.createdBy?.email === session.user.email) {
+      return NextResponse.json(
+        { error: "Creator cannot accept own task" },
+        { status: 403 }
+      );
+    }
+
+    // ❌ Only open tasks
+    if (taskData.status !== "open") {
+      return NextResponse.json(
+        { error: "Task is not open" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ STEP 3 — open → accepted
+    await taskRef.update({
+      status: "accepted",
+      acceptedAt: FieldValue.serverTimestamp(),
+      acceptorId: session.user.email,
+      acceptedBy: {
+        email: session.user.email,
+        name: session.user.name,
+      },
     });
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
+  } catch (err) {
+    console.error("❌ ACCEPT TASK ERROR:", err);
     return NextResponse.json(
-      { error: err.message },
-      { status: 400 }
+      { error: "Internal server error" },
+      { status: 500 }
     );
   }
 }

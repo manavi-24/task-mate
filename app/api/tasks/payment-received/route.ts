@@ -1,4 +1,4 @@
-// app/api/tasks/start/route.ts
+// app/api/tasks/payment-received/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -7,6 +7,8 @@ import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: Request) {
   try {
+    console.log("🔥 PAYMENT RECEIVED API HIT");
+
     const session = await getServerSession(authOptions);
 
     const userEmail = session?.user?.email;
@@ -39,26 +41,26 @@ export async function POST(req: Request) {
         throw new Error("Invalid task data");
       }
 
-      // ❌ Must be accepted
-      if (taskData.status !== "accepted") {
-        throw new Error("Task is not accepted yet");
+      // ❌ Only acceptor can confirm payment
+      if (taskData.acceptorId !== userEmail) {
+        throw new Error("Only acceptor can confirm payment");
       }
 
-      // ❌ Only acceptor can start task
-      if (taskData.acceptedBy?.email !== userEmail) {
-        throw new Error("Only acceptor can start task");
+      // ❌ Must be payment_pending
+      if (taskData.status !== "payment_pending") {
+        throw new Error("Task is not awaiting payment confirmation");
       }
 
-      // ✅ STEP 4 — accepted → in_progress
+      // ✅ STEP 7 — payment_pending → payment_received
       tx.update(taskRef, {
-        status: "in_progress",
-        startedAt: FieldValue.serverTimestamp(),
+        status: "payment_received",
+        paymentReceivedAt: FieldValue.serverTimestamp(),
       });
     });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error("❌ START TASK ERROR:", err);
+    console.error("❌ PAYMENT RECEIVED ERROR:", err);
     return NextResponse.json(
       { error: err.message || "Internal server error" },
       { status: 400 }

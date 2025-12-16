@@ -1,4 +1,4 @@
-// app/api/tasks/start/route.ts
+// app/api/tasks/work-done/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -39,26 +39,26 @@ export async function POST(req: Request) {
         throw new Error("Invalid task data");
       }
 
-      // ❌ Must be accepted
-      if (taskData.status !== "accepted") {
-        throw new Error("Task is not accepted yet");
+      // ❌ Must be in_progress
+      if (taskData.status !== "in_progress") {
+        throw new Error("Task is not in progress");
       }
 
-      // ❌ Only acceptor can start task
+      // ❌ Only acceptor can mark work done
       if (taskData.acceptedBy?.email !== userEmail) {
-        throw new Error("Only acceptor can start task");
+        throw new Error("Only acceptor can mark work done");
       }
 
-      // ✅ STEP 4 — accepted → in_progress
+      // ✅ STEP 5 — in_progress → work_done
       tx.update(taskRef, {
-        status: "in_progress",
-        startedAt: FieldValue.serverTimestamp(),
+        status: "work_done",
+        workDoneAt: FieldValue.serverTimestamp(),
       });
     });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error("❌ START TASK ERROR:", err);
+    console.error("❌ WORK DONE ERROR:", err);
     return NextResponse.json(
       { error: err.message || "Internal server error" },
       { status: 400 }

@@ -1,66 +1,45 @@
-import { getServerSession } from "next-auth";
+// app/api/tasks/close/route.ts
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/firebaseAdmin";
-
-/* 🔐 Explicit Task type for TypeScript */
-type Task = {
-  createdBy: {
-    email: string;
-  };
-  paymentStatus: "pending" | "paid" | "confirmed";
-  status: "open" | "accepted" | "in_progress" | "completed" | "closed";
-};
+import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  const userEmail = session?.user?.email;
-
-  if (!userEmail) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { taskId } = await req.json();
-
-  if (!taskId) {
-    return NextResponse.json({ error: "Task ID required" }, { status: 400 });
-  }
-
-  const taskRef = db.collection("tasks").doc(taskId);
-
   try {
-    await db.runTransaction(async (tx) => {
-      const snap = await tx.get(taskRef);
+    console.log("🔥 CLOSE TASK API HIT");
 
-      if (!snap.exists) {
-        throw new Error("Task not found");
-      }
+    const { taskId } = await req.json();
+    if (!taskId) {
+      return NextResponse.json({ error: "Task ID required" }, { status: 400 });
+    }
 
-      const task = snap.data() as Task | undefined;
-      if (!task) {
-        throw new Error("Invalid task data");
-      }
+    const taskRef = db.collection("tasks").doc(taskId);
+    const snap = await taskRef.get();
 
-      if (task.createdBy.email !== userEmail) {
-        throw new Error("Only creator can close task");
-      }
+    if (!snap.exists) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
 
-      if (task.paymentStatus !== "confirmed") {
-        throw new Error("Payment not confirmed yet");
-      }
+    const task = snap.data();
 
-      if (task.status === "closed") {
-        throw new Error("Task already closed");
-      }
+    // ❌ Can only close after payment received
+    if (task?.status !== "payment_received") {
+      return NextResponse.json(
+        { error: "Task is not ready to be closed" },
+        { status: 400 }
+      );
+    }
 
-      tx.update(taskRef, {
-        status: "closed",
-        closedAt: new Date(),
-      });
+    await taskRef.update({
+      status: "closed",
+      closedAt: FieldValue.serverTimestamp(),
     });
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 400 });
+  } catch (err) {
+    console.error("❌ CLOSE TASK ERROR:", err);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
