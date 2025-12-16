@@ -5,8 +5,9 @@ import { db } from "@/lib/firebaseAdmin";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
+  const userEmail = session?.user?.email;
 
-  if (!session?.user?.email) {
+  if (!userEmail) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -21,11 +22,17 @@ export async function POST(req: Request) {
   try {
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(taskRef);
-      if (!snap.exists) throw new Error("Task not found");
+
+      if (!snap.exists) {
+        throw new Error("Task not found");
+      }
 
       const task = snap.data();
+      if (!task) {
+        throw new Error("Invalid task data");
+      }
 
-      if (task.createdBy?.email !== session.user.email) {
+      if (task.createdBy?.email !== userEmail) {
         throw new Error("Only creator can close task");
       }
 
@@ -45,6 +52,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 400 });
+    return NextResponse.json(
+      { error: err.message },
+      { status: 400 }
+    );
   }
 }
