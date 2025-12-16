@@ -6,7 +6,9 @@ import { db } from "@/lib/firebaseAdmin";
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user?.email || !session.user.name) {
+  const userEmail = session?.user?.email;
+
+  if (!userEmail) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -29,18 +31,22 @@ export async function POST(req: Request) {
       const task = snap.data();
 
       if (task?.status !== "open") {
-        throw new Error("Task already accepted");
+        throw new Error("Task is not open");
       }
 
-      if (task.createdBy.email === session.user.email) {
+      if (task.createdBy?.email === userEmail) {
         throw new Error("Cannot accept your own task");
+      }
+
+      if (task.acceptedBy) {
+        throw new Error("Task already accepted");
       }
 
       tx.update(taskRef, {
         status: "accepted",
         acceptedBy: {
-          name: session.user.name,
-          email: session.user.email,
+          email: userEmail,
+          name: session.user?.name ?? "",
         },
         acceptedAt: new Date(),
       });
