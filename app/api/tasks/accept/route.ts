@@ -1,68 +1,56 @@
-export const runtime = "nodejs";
-
-import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/firebaseAdmin";
-import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
 
-  console.log("SESSION:", session);
-
-  if (!session?.user?.email) {
-    return NextResponse.json(
-      { error: "Not authenticated" },
-      { status: 401 }
-    );
+  if (!session?.user?.email || !session.user.name) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { taskId } = await req.json();
 
   if (!taskId) {
-    return NextResponse.json(
-      { error: "Missing taskId" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Task ID required" }, { status: 400 });
   }
 
   const taskRef = db.collection("tasks").doc(taskId);
-  const snap = await taskRef.get();
 
-  if (!snap.exists) {
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(taskRef);
+
+      if (!snap.exists) {
+        throw new Error("Task not found");
+      }
+
+      const task = snap.data();
+
+      if (task?.status !== "open") {
+        throw new Error("Task already accepted");
+      }
+
+      if (task.createdBy.email === session.user.email) {
+        throw new Error("Cannot accept your own task");
+      }
+
+      tx.update(taskRef, {
+        status: "accepted",
+        acceptedBy: {
+          name: session.user.name,
+          email: session.user.email,
+        },
+        acceptedAt: new Date(),
+      });
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
     return NextResponse.json(
-      { error: "Task not found" },
-      { status: 404 }
-    );
-  }
-
-  const task = snap.data();
-
-  // Creator cannot accept own task
-  if (task?.createdBy?.email === session.user.email) {
-    return NextResponse.json(
-      { error: "You cannot accept your own task" },
-      { status: 403 }
-    );
-  }
-
-  // Only open tasks
-  if (task?.status !== "open") {
-    return NextResponse.json(
-      { error: "Task is not open" },
+      { error: err.message },
       { status: 400 }
     );
   }
-
-  await taskRef.update({
-    status: "accepted",
-    acceptedBy: {
-      email: session.user.email,
-      name: session.user.name,
-    },
-    acceptedAt: FieldValue.serverTimestamp(),
-  });
-
-  return NextResponse.json({ success: true });
 }

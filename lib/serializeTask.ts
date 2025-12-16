@@ -18,18 +18,24 @@ export function serializeTask(
     category: data.category,
     status: data.status,
 
-    // nested objects (safe)
+    // nested objects
     createdBy: data.createdBy,
     acceptedBy: data.acceptedBy ?? null,
 
-    // 🔥 FIXED — ALL timestamps serialized
+    // lifecycle timestamps
     createdAt: serializeTimestamp(data.createdAt),
     acceptedAt: serializeTimestamp(data.acceptedAt),
     startedAt: serializeTimestamp(data.startedAt),
     completedAt: serializeTimestamp(data.completedAt),
     closedAt: serializeTimestamp(data.closedAt),
 
-    // 🔥 THIS WAS MISSING
+    // deadline
     deadline: serializeTimestamp(data.deadline),
+
+    // 🔥 PAYMENT FIELDS (THIS FIXES YOUR ISSUE)
+    paymentStatus: data.paymentStatus ?? "pending",
+    paymentMethod: data.paymentMethod ?? null,
+    paidAt: serializeTimestamp(data.paidAt),
+    paymentConfirmedAt: serializeTimestamp(data.paymentConfirmedAt),
   };
 }

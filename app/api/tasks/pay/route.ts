@@ -1,45 +1,50 @@
-export const runtime = "nodejs";
-
-import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/firebaseAdmin";
-import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
+
   if (!session?.user?.email) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { taskId, paymentMethod } = await req.json();
+  const { taskId } = await req.json();
 
-  const ref = db.collection("tasks").doc(taskId);
-  const snap = await ref.get();
-  const task = snap.data();
-
-  if (!task || task.status !== "completed") {
-    return NextResponse.json(
-      { error: "Task not completed yet" },
-      { status: 403 }
-    );
+  if (!taskId) {
+    return NextResponse.json({ error: "Task ID required" }, { status: 400 });
   }
 
-  if (task.createdBy.email !== session.user.email) {
-    return NextResponse.json(
-      { error: "Only creator can confirm payment" },
-      { status: 403 }
-    );
+  const taskRef = db.collection("tasks").doc(taskId);
+
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(taskRef);
+      if (!snap.exists) throw new Error("Task not found");
+
+      const task = snap.data();
+
+      if (task.status !== "completed") {
+        throw new Error("Task not completed yet");
+      }
+
+      if ((task.paymentStatus ?? "pending") !== "pending") {
+        throw new Error("Payment already handled");
+      }
+
+      if (task.acceptedBy?.email !== session.user.email) {
+        throw new Error("Only acceptor can mark payment");
+      }
+
+      tx.update(taskRef, {
+        paymentStatus: "paid",
+        paidAt: new Date(),
+      });
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 400 });
   }
-
-  await ref.update({
-    status: "paid",
-    payment: {
-      method: paymentMethod,
-      confirmedBy: session.user.email,
-      paidAt: FieldValue.serverTimestamp(),
-    },
-  });
-
-  return NextResponse.json({ success: true });
 }

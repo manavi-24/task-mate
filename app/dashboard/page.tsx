@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
@@ -18,7 +20,7 @@ export default async function DashboardPage() {
   const postedSnap = await db
     .collection("tasks")
     .where("createdBy.email", "==", email)
-    .orderBy("createdAt", "desc") // ✅ FIXED
+    .orderBy("createdAt", "desc")
     .get();
 
   const postedTasks = postedSnap.docs.map(serializeTask);
@@ -31,7 +33,7 @@ export default async function DashboardPage() {
 
   const acceptedTasks = acceptedSnap.docs.map(serializeTask);
 
-  /* ---------- EARNINGS ---------- */
+  /* ---------- EARNINGS (ONLY CLOSED TASKS) ---------- */
   const earnings = acceptedTasks
     .filter(task => task.status === "closed")
     .reduce((sum, task) => sum + (task.price || 0), 0);

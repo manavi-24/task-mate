@@ -10,13 +10,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { taskId, paymentMethod } = await req.json();
+  const { taskId } = await req.json();
 
-  if (!taskId || !paymentMethod) {
-    return NextResponse.json(
-      { error: "Task ID and payment method required" },
-      { status: 400 }
-    );
+  if (!taskId) {
+    return NextResponse.json({ error: "Task ID required" }, { status: 400 });
   }
 
   const taskRef = db.collection("tasks").doc(taskId);
@@ -24,32 +21,30 @@ export async function POST(req: Request) {
   try {
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(taskRef);
-
       if (!snap.exists) throw new Error("Task not found");
 
       const task = snap.data();
 
-      if (task?.status !== "in_progress") {
-        throw new Error("Task not in progress");
+      if (task.createdBy?.email !== session.user.email) {
+        throw new Error("Only creator can close task");
       }
 
-      if (task.acceptedBy?.email !== session.user.email) {
-        throw new Error("Only acceptor can complete task");
+      if (task.paymentStatus !== "confirmed") {
+        throw new Error("Payment not confirmed yet");
+      }
+
+      if (task.status === "closed") {
+        throw new Error("Task already closed");
       }
 
       tx.update(taskRef, {
-        status: "completed",
-        completedAt: new Date(),
-        paymentMethod,
-        paymentStatus: "pending", // for STEP 5
+        status: "closed",
+        closedAt: new Date(),
       });
     });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    return NextResponse.json(
-      { error: err.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: err.message }, { status: 400 });
   }
 }
