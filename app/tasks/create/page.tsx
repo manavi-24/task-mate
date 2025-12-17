@@ -20,7 +20,9 @@ export default function CreateTaskPage() {
       description: formData.get("description"),
       category: formData.get("category"),
       price: Number(formData.get("price")),
-      deadline: formData.get("deadline"),
+      hostel: formData.get("hostel"),
+      roomNumber: formData.get("roomNumber"),
+      deadline: formData.get("deadline"), // ISO datetime string
     };
 
     const res = await fetch("/api/tasks", {
@@ -46,12 +48,82 @@ export default function CreateTaskPage() {
       {error && <p className="text-red-500 mb-2">{error}</p>}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input name="title" placeholder="Title" required className="w-full p-2 border" />
-        <textarea name="description" placeholder="Description" required className="w-full p-2 border" />
-        <input name="category" placeholder="Category" required className="w-full p-2 border" />
-        <input name="price" type="number" placeholder="Price" required className="w-full p-2 border" />
-        <input name="deadline" type="date" required className="w-full p-2 border" />
+        {/* Title */}
+        <input
+          name="title"
+          placeholder="Task title"
+          required
+          className="w-full p-2 border"
+        />
 
+        {/* Description */}
+        <textarea
+          name="description"
+          placeholder="Describe the task clearly"
+          required
+          className="w-full p-2 border"
+        />
+
+        {/* Category Dropdown */}
+        <select
+          name="category"
+          required
+          className="w-full p-2 border"
+          defaultValue=""
+        >
+          <option value="" disabled>
+            Select category
+          </option>
+          <option value="cooking">Cooking</option>
+          <option value="cleaning">Cleaning</option>
+          <option value="drying">Drying</option>
+          <option value="academics">Academics</option>
+          <option value="others">Others</option>
+        </select>
+
+        {/* Price */}
+        <input
+          name="price"
+          type="number"
+          placeholder="Price (₹)"
+          required
+          min={1}
+          className="w-full p-2 border"
+        />
+
+        {/* Hostel */}
+        <input
+          name="hostel"
+          placeholder="Hostel (e.g. Hostel A)"
+          required
+          className="w-full p-2 border"
+        />
+
+        {/* Room Number */}
+        <input
+          name="roomNumber"
+          placeholder="Room number (e.g. 204)"
+          required
+          className="w-full p-2 border"
+        />
+
+        {/* Deadline with date + time */}
+        <div>
+          <label className="block text-sm mb-1 text-gray-300">
+            Deadline (date & time)
+          </label>
+          <input
+            name="deadline"
+            type="datetime-local"
+            required
+            className="w-full p-2 border"
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            Please select both date and time. Task must be completed before this.
+          </p>
+        </div>
+
+        {/* Submit */}
         <button
           disabled={loading}
           className="w-full bg-black text-white py-2 rounded"

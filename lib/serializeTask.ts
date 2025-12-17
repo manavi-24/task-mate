@@ -18,21 +18,30 @@ export function serializeTask(
     category: data.category,
     status: data.status,
 
-    // nested objects
-    createdBy: data.createdBy,
+    // 📍 NEW: location details
+    hostel: data.hostel,
+    roomNumber: data.roomNumber,
+
+    // 👤 users
+    createdBy: {
+      name: data.createdBy?.name ?? null,
+      email: data.createdBy?.email ?? null,
+      photoURL: data.createdBy?.photoURL ?? null,
+    },
+
     acceptedBy: data.acceptedBy ?? null,
 
-    // lifecycle timestamps
+    // 🕒 lifecycle timestamps
     createdAt: serializeTimestamp(data.createdAt),
     acceptedAt: serializeTimestamp(data.acceptedAt),
     startedAt: serializeTimestamp(data.startedAt),
     completedAt: serializeTimestamp(data.completedAt),
     closedAt: serializeTimestamp(data.closedAt),
 
-    // deadline
+    // ⏰ deadline
     deadline: serializeTimestamp(data.deadline),
 
-    // 🔥 PAYMENT FIELDS (THIS FIXES YOUR ISSUE)
+    // 💰 payment
     paymentStatus: data.paymentStatus ?? "pending",
     paymentMethod: data.paymentMethod ?? null,
     paidAt: serializeTimestamp(data.paidAt),

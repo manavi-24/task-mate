@@ -32,14 +32,14 @@ export default function TaskRow({ task, role }: TaskRowProps) {
       }
 
       window.location.reload();
-    } catch (err) {
+    } catch {
       alert("Network error");
       setLoading(false);
     }
   }
 
   /* ========================= */
-  /* STEP 8 — AUTO CLOSE TASK */
+  /* AUTO CLOSE TASK */
   /* payment_received → closed */
   /* ========================= */
   useEffect(() => {
@@ -52,25 +52,76 @@ export default function TaskRow({ task, role }: TaskRowProps) {
     }
   }, [task.status, task.id]);
 
+  const formattedDeadline = task.deadline
+    ? new Date(task.deadline).toLocaleString()
+    : "—";
+
+  /* ========================= */
+  /* EXPIRING SOON (< 6 HOURS) */
+  /* ========================= */
+  const isExpiringSoon =
+    task.deadline &&
+    new Date(task.deadline).getTime() - Date.now() <
+      6 * 60 * 60 * 1000;
+
   return (
-    <div className="border border-gray-700 rounded p-4 space-y-3">
-      {/* TASK INFO */}
+    <div className="border border-gray-700 rounded p-4 space-y-4">
+      {/* ================= TASK INFO ================= */}
       <div>
         <h3 className="font-semibold text-lg">{task.title}</h3>
         <p className="text-sm text-gray-400">{task.description}</p>
-        <p className="text-sm text-gray-400">₹{task.price}</p>
       </div>
 
-      {/* STATUS */}
+      {/* ================= META ================= */}
+      <div className="text-sm text-gray-300 space-y-1">
+        <p>💰 Price: ₹{task.price}</p>
+        <p>📍 Location: {task.hostel}, Room {task.roomNumber}</p>
+        <p>⏰ Deadline: {formattedDeadline}</p>
+        <p>📂 Category: {task.category}</p>
+
+        {isExpiringSoon && (
+          <p className="text-red-400 font-semibold">
+            ⚠️ Expiring Soon
+          </p>
+        )}
+      </div>
+
+      {/* ================= CREATOR INFO ================= */}
+      <div className="flex items-center gap-3 text-sm">
+        {/* Avatar */}
+        <div className="w-9 h-9 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
+          {task.createdBy?.photoURL ? (
+            <img
+              src={task.createdBy.photoURL}
+              alt={task.createdBy.name}
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <span className="text-white font-semibold">
+              {task.createdBy?.name?.[0]?.toUpperCase() ?? "U"}
+            </span>
+          )}
+        </div>
+
+        {/* Name + Email */}
+        <div>
+          <p className="font-medium">{task.createdBy?.name}</p>
+          <p className="text-gray-400 text-xs">
+            {task.createdBy?.email}
+          </p>
+        </div>
+      </div>
+
+      {/* ================= STATUS ================= */}
       <div className="text-sm">
         <span>Status: </span>
         <span className="font-medium capitalize">{task.status}</span>
       </div>
 
-      {/* ========================= */}
+      {/* ================= ACTIONS ================= */}
+
       {/* STEP 3 — ACCEPT TASK */}
-      {/* open → accepted */}
-      {/* ========================= */}
       {task.status === "open" && role === "acceptor" && (
         <button
           disabled={loading}
@@ -81,10 +132,7 @@ export default function TaskRow({ task, role }: TaskRowProps) {
         </button>
       )}
 
-      {/* ========================= */}
       {/* STEP 4 — START TASK */}
-      {/* accepted → in_progress */}
-      {/* ========================= */}
       {task.status === "accepted" && role === "acceptor" && (
         <button
           disabled={loading}
@@ -95,10 +143,7 @@ export default function TaskRow({ task, role }: TaskRowProps) {
         </button>
       )}
 
-      {/* ========================= */}
       {/* STEP 5 — WORK DONE */}
-      {/* in_progress → work_done */}
-      {/* ========================= */}
       {task.status === "in_progress" && role === "acceptor" && (
         <button
           disabled={loading}
@@ -109,10 +154,7 @@ export default function TaskRow({ task, role }: TaskRowProps) {
         </button>
       )}
 
-      {/* ========================= */}
       {/* STEP 6 — CREATOR COMPLETES */}
-      {/* work_done → payment_pending */}
-      {/* ========================= */}
       {task.status === "work_done" && role === "creator" && (
         <div className="space-y-2">
           <select
@@ -140,10 +182,7 @@ export default function TaskRow({ task, role }: TaskRowProps) {
         </div>
       )}
 
-      {/* ========================= */}
       {/* STEP 7 — PAYMENT RECEIVED */}
-      {/* payment_pending → payment_received */}
-      {/* ========================= */}
       {task.status === "payment_pending" && role === "acceptor" && (
         <button
           disabled={loading}
@@ -154,10 +193,7 @@ export default function TaskRow({ task, role }: TaskRowProps) {
         </button>
       )}
 
-      {/* ========================= */}
       {/* FINAL STATE */}
-      {/* closed */}
-      {/* ========================= */}
       {task.status === "closed" && (
         <p className="text-green-600 font-semibold">
           ✅ Task completed and closed successfully

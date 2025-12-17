@@ -16,13 +16,23 @@ export async function POST(req: Request) {
 
   // 2️⃣ Read body
   const body = await req.json();
-  const { title, description, price, category, deadline } = body;
+  const {
+    title,
+    description,
+    price,
+    category,
+    hostel,
+    roomNumber,
+    deadline, // ISO datetime string (mandatory)
+  } = body;
 
   // 3️⃣ Server-side validation
   if (
     !title ||
     !description ||
     !category ||
+    !hostel ||
+    !roomNumber ||
     !deadline ||
     typeof price !== "number" ||
     price <= 0
@@ -33,18 +43,34 @@ export async function POST(req: Request) {
     );
   }
 
+  const parsedDeadline = new Date(deadline);
+
+  if (isNaN(parsedDeadline.getTime())) {
+    return NextResponse.json(
+      { error: "Invalid deadline format" },
+      { status: 400 }
+    );
+  }
+
   // 4️⃣ Create task
   await db.collection("tasks").add({
     title,
     description,
     price,
     category,
-    deadline: new Date(deadline),
+
+    hostel,
+    roomNumber,
+    deadline: parsedDeadline,
+
     status: "open",
+
     createdBy: {
       name: session.user.name,
       email: session.user.email,
+      photoURL: session.user.image ?? null,
     },
+
     createdAt: new Date(),
   });
 
