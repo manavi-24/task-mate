@@ -1,4 +1,4 @@
-# 🚀TaskMate
+# 🚀 TaskMate
 
 TaskMate is a comprehensive task management app designed for seamless interaction between task creators and acceptors. With features like role-based access, strict task lifecycle validation, advanced filtering, and more, TaskMate is a production-ready app built with Next.js and Firebase.
 
