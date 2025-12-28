@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 type TaskRowProps = {
   task: any;
@@ -16,24 +17,90 @@ export default function TaskRow({ task, role }: TaskRowProps) {
   async function callApi(endpoint: string, body: any = {}) {
     try {
       setLoading(true);
-
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId: task.id, ...body }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         alert(data.error || "Something went wrong");
         setLoading(false);
         return;
       }
-
       window.location.reload();
     } catch {
       alert("Network error");
+      setLoading(false);
+    }
+  }
+
+  // Razorpay payment handler
+  async function handleRazorpayPayment() {
+    setLoading(true);
+    try {
+      // Create order on backend
+      const res = await fetch("/api/payment/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: task.price,
+          currency: "INR",
+          receipt: `taskmate_${task.id}`,
+          notes: { taskId: task.id },
+        }),
+      });
+      const { orderId, order, error } = await res.json();
+      if (!orderId || error) {
+        alert(error || "Failed to create payment order");
+        setLoading(false);
+        return;
+      }
+
+      // @ts-ignore
+      const Razorpay = window.Razorpay;
+      if (!Razorpay) {
+        alert("Razorpay SDK not loaded");
+        setLoading(false);
+        return;
+      }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: "TaskMate Payment",
+        description: `Payment for task: ${task.title}`,
+        image: "/favicon.ico",
+        order_id: orderId,
+        handler: async function (response: any) {
+          // Optionally, verify payment on backend here
+          await callApi("/api/tasks/complete", {
+            paymentMethod: "online",
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_signature: response.razorpay_signature,
+          });
+        },
+        prefill: {
+          name: task.createdBy?.name,
+          email: task.createdBy?.email,
+        },
+        notes: {
+          taskId: task.id,
+        },
+        theme: {
+          color: "#6366f1",
+        },
+        modal: {
+          ondismiss: () => setLoading(false),
+        },
+      };
+      const rzp = new Razorpay(options);
+      rzp.open();
+      setLoading(false);
+    } catch (err) {
+      alert("Payment initiation failed");
       setLoading(false);
     }
   }
@@ -52,8 +119,17 @@ export default function TaskRow({ task, role }: TaskRowProps) {
     }
   }, [task.status, task.id]);
 
+  // Use a fixed locale and options for consistent SSR/CSR rendering
   const formattedDeadline = task.deadline
-    ? new Date(task.deadline).toLocaleString()
+    ? new Date(task.deadline).toLocaleString('en-GB', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      })
     : "—";
 
   /* ========================= */
@@ -163,22 +239,32 @@ export default function TaskRow({ task, role }: TaskRowProps) {
               setPaymentMethod(e.target.value as "cash" | "upi" | "online")
             }
             className="border p-2 rounded w-full"
+            disabled={loading}
           >
             <option value="">Select payment method</option>
             <option value="cash">Cash</option>
-            <option value="upi">UPI</option>
-            <option value="online">Online</option>
+            <option value="online">Online (Card/UPI/Wallets)</option>
           </select>
 
-          <button
-            disabled={loading || !paymentMethod}
-            onClick={() =>
-              callApi("/api/tasks/complete", { paymentMethod })
-            }
-            className="px-3 py-1 bg-yellow-500 text-black rounded w-full"
-          >
-            Complete Task
-          </button>
+          {/* Show payment button for online, else fallback to old flow */}
+          {paymentMethod === "online" ? (
+            <button
+              disabled={loading}
+              onClick={handleRazorpayPayment}
+              className="px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded w-full font-semibold flex items-center justify-center gap-2 shadow-lg hover:from-indigo-600 hover:to-purple-600 transition"
+            >
+              <Image src="/razorpay-logo.svg" alt="Razorpay" width={24} height={24} />
+              Pay & Complete Task
+            </button>
+          ) : (
+            <button
+              disabled={loading || !paymentMethod}
+              onClick={() => callApi("/api/tasks/complete", { paymentMethod })}
+              className="px-3 py-2 bg-yellow-500 text-black rounded w-full font-semibold hover:bg-yellow-400 transition"
+            >
+              Complete Task
+            </button>
+          )}
         </div>
       )}
 
