@@ -1,11 +1,22 @@
 // app/api/tasks/close/route.ts
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: Request) {
   try {
     console.log("🔥 CLOSE TASK API HIT");
+
+    const session = await getServerSession(authOptions);
+    const userEmail = session?.user?.email;
+    if (!userEmail) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
     const { taskId } = await req.json();
     if (!taskId) {
@@ -21,6 +32,14 @@ export async function POST(req: Request) {
 
     const task = snap.data();
 
+    // Only creator can close.
+    if (task?.createdBy?.email !== userEmail) {
+      return NextResponse.json(
+        { error: "Only creator can close the task" },
+        { status: 403 }
+      );
+    }
+
     // ❌ Can only close after payment received
     if (task?.status !== "payment_received") {
       return NextResponse.json(
@@ -32,6 +51,7 @@ export async function POST(req: Request) {
     await taskRef.update({
       status: "closed",
       closedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     return NextResponse.json({ success: true });

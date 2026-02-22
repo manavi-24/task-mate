@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/firebaseAdmin";
 import { FieldValue } from "firebase-admin/firestore";
+import { addUserNotification } from "@/lib/notifications";
 
 export async function POST(req: Request) {
   try {
@@ -28,6 +29,9 @@ export async function POST(req: Request) {
 
     const taskRef = db.collection("tasks").doc(taskId);
 
+    let acceptorEmail: string | null = null;
+    let taskTitle: string | null = null;
+
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(taskRef);
 
@@ -39,6 +43,9 @@ export async function POST(req: Request) {
       if (!taskData) {
         throw new Error("Invalid task data");
       }
+
+      acceptorEmail = taskData.acceptedBy?.email ?? null;
+      taskTitle = taskData.title ?? null;
 
       // ❌ Must be work_done
       if (taskData.status !== "work_done") {
@@ -55,14 +62,27 @@ export async function POST(req: Request) {
         status: "payment_pending",
         completedAt: FieldValue.serverTimestamp(),
         paymentMethod,
+        updatedAt: FieldValue.serverTimestamp(),
       });
     });
 
+    if (acceptorEmail && acceptorEmail !== userEmail) {
+      await addUserNotification({
+        toEmail: acceptorEmail,
+        type: "task_completed",
+        title: "Task completed",
+        message: `${session.user?.name ?? "Someone"} completed “${
+          taskTitle ?? "your task"
+        }”. Awaiting payment confirmation.`,
+        taskId,
+      });
+    }
+
     return NextResponse.json({ success: true });
-  } catch (err: any) {
+  } catch (err) {
     console.error("❌ COMPLETE TASK ERROR:", err);
     return NextResponse.json(
-      { error: err.message || "Internal server error" },
+      { error: err instanceof Error ? err.message : "Internal server error" },
       { status: 400 }
     );
   }

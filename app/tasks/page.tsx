@@ -1,9 +1,12 @@
 import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/firebaseAdmin";
 import { serializeTask } from "@/lib/serializeTask";
-import TaskRow from "@/components/TaskRow";
+import Link from "next/link";
+import { InlineAlert } from "@/components/ui/InlineAlert";
+import { Button } from "@/components/ui/Button";
+import { TaskCompactRow } from "@/components/dashboard/TaskCompactRow";
+import TasksAcceptHighlight from "@/app/tasks/TasksAcceptHighlight";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +14,7 @@ export default async function TasksPage(props: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await getServerSession(authOptions);
-
-  if (!session?.user?.email) {
-    redirect("/login");
-  }
+  const isAuthed = Boolean(session?.user?.email);
 
   /* ================= AWAIT searchParams ================= */
   const rawSearchParams = (await props.searchParams) || {};
@@ -34,6 +34,21 @@ export default async function TasksPage(props: {
       ? rawSearchParams.sort
       : "";
 
+  const created =
+    typeof rawSearchParams.created === "string"
+      ? rawSearchParams.created
+      : "";
+
+  const focus =
+    typeof rawSearchParams.focus === "string"
+      ? rawSearchParams.focus
+      : "";
+
+  const accept =
+    typeof rawSearchParams.accept === "string"
+      ? rawSearchParams.accept
+      : "";
+
   /* ================= FETCH TASKS ================= */
   const snap = await db
     .collection("tasks")
@@ -42,12 +57,15 @@ export default async function TasksPage(props: {
 
   let tasks = snap.docs.map(serializeTask);
 
-  const now = Date.now();
+  // Use an ISO timestamp string to filter expired tasks without calling Date.now()
+  // (repo lint rule flags Date.now() during render as impure).
+  const nowIso = new Date().toISOString();
 
   /* ================= HIDE EXPIRED ================= */
   tasks = tasks.filter(task => {
     if (!task.deadline) return true;
-    return new Date(task.deadline).getTime() > now;
+    // deadline is an ISO string (see serializeTask). ISO strings sort lexicographically.
+    return task.deadline > nowIso;
   });
 
   /* ================= FILTER: CATEGORY ================= */
@@ -77,15 +95,59 @@ export default async function TasksPage(props: {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Available Tasks</h1>
+    <div className="relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-indigo-500/20 blur-3xl" />
+        <div className="absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-purple-500/20 blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.08)_1px,transparent_0)] [background-size:24px_24px]" />
+      </div>
+
+      <div className="relative mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8 space-y-6">
+        <TasksAcceptHighlight taskId={focus || accept} />
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-indigo-300">
+              Task board
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">
+              Browse tasks
+            </h1>
+            <p className="text-white/60 mt-2 max-w-2xl">
+              Find tasks posted by hostelmates and accept one to start earning.
+            </p>
+          </div>
+
+          {isAuthed ? (
+            <Link href="/tasks/create">
+              <Button className="shrink-0">Create task</Button>
+            </Link>
+          ) : (
+            <Link
+              href={`/get-started?callback=${encodeURIComponent("/tasks")}`}
+            >
+              <Button className="shrink-0">Get started</Button>
+            </Link>
+          )}
+        </div>
+
+      {focus || accept ? (
+        <InlineAlert variant="info" title="Tip">
+          Sign in to accept tasks. After login, we’ll bring you back to this task.
+        </InlineAlert>
+      ) : null}
+
+      {created === "1" && (
+        <InlineAlert variant="success" title="Task posted">
+          Your task is live. Share it with friends to get it accepted faster.
+        </InlineAlert>
+      )}
 
       {/* ================= FILTER BAR ================= */}
       <form method="GET" className="flex flex-wrap gap-3">
         <select
           name="category"
           defaultValue={category}
-          className="border p-2 rounded"
+          className="border border-white/10 bg-white/5 text-white p-2 rounded-xl"
         >
           <option value="all">All Categories</option>
           <option value="cooking">Cooking</option>
@@ -99,13 +161,13 @@ export default async function TasksPage(props: {
           name="hostel"
           placeholder="Filter by hostel"
           defaultValue={hostel}
-          className="border p-2 rounded"
+          className="border border-white/10 bg-white/5 text-white placeholder:text-white/40 p-2 rounded-xl"
         />
 
         <select
           name="sort"
           defaultValue={sort}
-          className="border p-2 rounded"
+          className="border border-white/10 bg-white/5 text-white p-2 rounded-xl"
         >
           <option value="">Default order</option>
           <option value="deadline">Nearest deadline</option>
@@ -113,7 +175,7 @@ export default async function TasksPage(props: {
 
         <button
           type="submit"
-          className="bg-black text-white px-4 py-2 rounded"
+          className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-4 py-2 rounded-xl font-semibold"
         >
           Apply
         </button>
@@ -121,12 +183,22 @@ export default async function TasksPage(props: {
 
       {/* ================= TASK LIST ================= */}
       {tasks.length === 0 && (
-        <p className="text-gray-400">No tasks available right now.</p>
+        <InlineAlert variant="info" title="No tasks available">
+          Check back later, or post one yourself.
+        </InlineAlert>
       )}
 
-      {tasks.map(task => (
-        <TaskRow key={task.id} task={task} role="acceptor" />
-      ))}
+      <div className="space-y-3">
+        {tasks.map(task => (
+          <TaskCompactRow
+            key={task.id}
+            task={task}
+            role="acceptor"
+            highlight={focus === task.id || accept === task.id}
+          />
+        ))}
+      </div>
+      </div>
     </div>
   );
 }

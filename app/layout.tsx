@@ -20,7 +20,7 @@ export default function RootLayout({
         <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
         <AuthSessionProvider>
           <Navbar />
-          <main className="pt-6">{children}</main>
+          <main>{children}</main>
         </AuthSessionProvider>
       </body>
     </html>

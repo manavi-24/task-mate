@@ -9,8 +9,8 @@ export default async function CreateTaskLayout({
 }) {
   const session = await getServerSession(authOptions);
 
-  if (!session) {
-    redirect("/login");
+  if (!session?.user?.email) {
+    redirect("/get-started?callback=%2Ftasks%2Fcreate");
   }
 
   return <>{children}</>;

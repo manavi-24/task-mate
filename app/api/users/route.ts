@@ -12,16 +12,21 @@ export async function POST() {
 
   const userRef = db.collection("users").doc(session.user.email);
   const userSnap = await userRef.get();
+  const createdAt = userSnap.exists
+    ? userSnap.get("createdAt") ?? new Date()
+    : new Date();
 
-  if (!userSnap.exists) {
-    await userRef.set({
-      name: session.user.name,
+  await userRef.set(
+    {
+      name: session.user.name ?? null,
       email: session.user.email,
-      hostel: "",
-      phone: "",
-      createdAt: new Date(),
-    });
-  }
+      photoURL: session.user.image ?? null,
+      createdAt,
+      updatedAt: new Date(),
+      lastActive: new Date(),
+    },
+    { merge: true }
+  );
 
   return NextResponse.json({ success: true });
 }

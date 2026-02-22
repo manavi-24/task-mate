@@ -1,16 +1,6 @@
-"use client";
-
-import { signIn } from "next-auth/react";
+import { redirect } from "next/navigation";
 
 export default function LoginPage() {
-  return (
-    <div className="h-screen flex items-center justify-center">
-      <button
-        onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-        className="px-6 py-3 bg-black text-white rounded"
-      >
-        Sign in with Google
-      </button>
-    </div>
-  );
+  // Single auth entry point.
+  redirect("/get-started");
 }

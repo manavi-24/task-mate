@@ -1,9 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import Razorpay from "razorpay";
+import type { Orders } from "razorpay/dist/types/orders";
+
+type CreateOrderBody = {
+  amount: number;
+  currency?: string;
+  receipt?: string;
+  notes?: Record<string, string | number>;
+};
 
 export async function POST(req: NextRequest) {
   try {
-    const { amount, currency = "INR", receipt, notes } = await req.json();
+    const {
+      amount,
+      currency = "INR",
+      receipt,
+      notes,
+    } = (await req.json()) as CreateOrderBody;
+
+    if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) {
+      return NextResponse.json(
+        { error: "Invalid amount" },
+        { status: 400 }
+      );
+    }
 
 
     // Use environment variables for security
@@ -17,7 +37,7 @@ export async function POST(req: NextRequest) {
       key_secret,
     });
 
-    const options = {
+    const options: Orders.RazorpayOrderCreateRequestBody = {
       amount: Math.round(amount * 100), // Razorpay expects paise
       currency,
       receipt: receipt || `rcptid_${Date.now()}`,
@@ -26,7 +46,8 @@ export async function POST(req: NextRequest) {
 
     const order = await razorpay.orders.create(options);
     return NextResponse.json({ orderId: order.id, order });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

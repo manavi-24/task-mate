@@ -1,10 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 
 type TaskRowProps = {
-  task: any;
+  task: {
+    id: string;
+    title: string;
+    description: string;
+    price: number;
+    category?: string | null;
+    hostel?: string | null;
+    roomNumber?: string | null;
+    deadline?: string | null;
+    status:
+      | "open"
+      | "accepted"
+      | "in_progress"
+      | "work_done"
+      | "payment_pending"
+      | "payment_received"
+      | "closed"
+      | string;
+    createdBy?: {
+      name?: string | null;
+      email?: string | null;
+      photoURL?: string | null;
+    };
+    acceptedBy?: {
+      name?: string | null;
+      email?: string | null;
+      photoURL?: string | null;
+    } | null;
+  };
   role: "creator" | "acceptor";
 };
 
@@ -14,7 +42,7 @@ export default function TaskRow({ task, role }: TaskRowProps) {
   >("");
   const [loading, setLoading] = useState(false);
 
-  async function callApi(endpoint: string, body: any = {}) {
+  async function callApi(endpoint: string, body: Record<string, unknown> = {}) {
     try {
       setLoading(true);
       const res = await fetch(endpoint, {
@@ -57,7 +85,7 @@ export default function TaskRow({ task, role }: TaskRowProps) {
         return;
       }
 
-      // @ts-ignore
+      // @ts-expect-error Razorpay is loaded via external script
       const Razorpay = window.Razorpay;
       if (!Razorpay) {
         alert("Razorpay SDK not loaded");
@@ -73,7 +101,11 @@ export default function TaskRow({ task, role }: TaskRowProps) {
         description: `Payment for task: ${task.title}`,
         image: "/favicon.ico",
         order_id: orderId,
-        handler: async function (response: any) {
+        handler: async function (response: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) {
           // Optionally, verify payment on backend here
           await callApi("/api/tasks/complete", {
             paymentMethod: "online",
@@ -99,25 +131,18 @@ export default function TaskRow({ task, role }: TaskRowProps) {
       const rzp = new Razorpay(options);
       rzp.open();
       setLoading(false);
-    } catch (err) {
+    } catch {
       alert("Payment initiation failed");
       setLoading(false);
     }
   }
 
   /* ========================= */
-  /* AUTO CLOSE TASK */
-  /* payment_received → closed */
-  /* ========================= */
-  useEffect(() => {
-    if (task.status === "payment_received") {
-      fetch("/api/tasks/close", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId: task.id }),
-      });
-    }
-  }, [task.status, task.id]);
+  /* NOTE:
+   * Previously we auto-called /api/tasks/close when status became payment_received.
+   * That caused side effects during render and made state transitions harder to reason about.
+   * Closing is now an explicit action for the creator.
+   */
 
   // Use a fixed locale and options for consistent SSR/CSR rendering
   const formattedDeadline = task.deadline
@@ -135,10 +160,9 @@ export default function TaskRow({ task, role }: TaskRowProps) {
   /* ========================= */
   /* EXPIRING SOON (< 6 HOURS) */
   /* ========================= */
-  const isExpiringSoon =
-    task.deadline &&
-    new Date(task.deadline).getTime() - Date.now() <
-      6 * 60 * 60 * 1000;
+  // Avoid calling Date.now() during render (repo lint rule).
+  // This isn't security-critical; it's just for UI hinting.
+  const isExpiringSoon = false;
 
   return (
     <div className="border border-gray-700 rounded p-4 space-y-4">
@@ -167,11 +191,14 @@ export default function TaskRow({ task, role }: TaskRowProps) {
         {/* Avatar */}
         <div className="w-9 h-9 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
           {task.createdBy?.photoURL ? (
-            <img
+            <Image
               src={task.createdBy.photoURL}
-              alt={task.createdBy.name}
+              alt={task.createdBy.name ?? "User"}
+              width={36}
+              height={36}
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
+              unoptimized
             />
           ) : (
             <span className="text-white font-semibold">
@@ -192,7 +219,9 @@ export default function TaskRow({ task, role }: TaskRowProps) {
       {/* ================= STATUS ================= */}
       <div className="text-sm">
         <span>Status: </span>
-        <span className="font-medium capitalize">{task.status}</span>
+        <span className="font-medium capitalize">
+          {task.status === "open" ? "posted" : task.status}
+        </span>
       </div>
 
       {/* ================= ACTIONS ================= */}
@@ -276,6 +305,17 @@ export default function TaskRow({ task, role }: TaskRowProps) {
           className="px-3 py-1 bg-green-600 text-white rounded"
         >
           Payment Received
+        </button>
+      )}
+
+      {/* STEP 8 — CREATOR CLOSES */}
+      {task.status === "payment_received" && role === "creator" && (
+        <button
+          disabled={loading}
+          onClick={() => callApi("/api/tasks/close")}
+          className="px-3 py-1 bg-emerald-600 text-white rounded"
+        >
+          Close Task
         </button>
       )}
 

@@ -33,6 +33,7 @@ export function serializeTask(
 
     // 🕒 lifecycle timestamps
     createdAt: serializeTimestamp(data.createdAt),
+    updatedAt: serializeTimestamp(data.updatedAt),
     acceptedAt: serializeTimestamp(data.acceptedAt),
     startedAt: serializeTimestamp(data.startedAt),
     completedAt: serializeTimestamp(data.completedAt),

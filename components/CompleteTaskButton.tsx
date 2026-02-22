@@ -33,7 +33,7 @@ export default function CompleteTaskButton({ taskId }: { taskId: string }) {
 
       // success → refresh task list
       window.location.reload();
-    } catch (err) {
+    } catch {
       setError("Network error");
       setLoading(false);
     }
