@@ -272,7 +272,7 @@ export default function TaskRow({ task, role }: TaskRowProps) {
           >
             <option value="">Select payment method</option>
             <option value="cash">Cash</option>
-            <option value="online">Online (Card/UPI/Wallets)</option>
+            {/*<option value="online">Online (Card/UPI/Wallets)</option>*/}
           </select>
 
           {/* Show payment button for online, else fallback to old flow */}

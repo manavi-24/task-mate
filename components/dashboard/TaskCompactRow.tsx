@@ -326,7 +326,7 @@ export function TaskCompactRow({
                 <option value="">Select payment</option>
                 <option value="cash">Cash</option>
                 <option value="upi">UPI</option>
-                <option value="online">Online (Razorpay)</option>
+              {/*  <option value="online">Online (Razorpay)</option>*/}
               </select>
 
               {paymentMethod === "online" ? (
