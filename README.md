@@ -1,7 +1,6 @@
 # 🚀 TaskMate
 
-TaskMate is a full-stack task management platform designed to enable a **student-driven micro-economy within hostels**, where users can post tasks, accept work, and complete them through a structured and secure workflow.
-
+TaskMate is a task coordination system built to model a hostel-level micro-economy, where users can post tasks, accept work, and complete them through a structured and secure workflow. Tasks move through strictly controlled states and user actions are governed by role-based constraints and validated transitions.
 ---
 
 ## 💡 Problem
