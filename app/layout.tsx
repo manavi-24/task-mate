@@ -7,6 +7,9 @@ import Script from "next/script";
 export const metadata = {
   title: "TaskMate",
   description: "Hostel task marketplace",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
