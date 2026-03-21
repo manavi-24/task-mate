@@ -13,6 +13,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
       <select
         ref={ref}
         {...props}
+        style={{
+          colorScheme: 'dark',
+          ...(props.style || {})
+        }}
         className={cn(
           "w-full rounded-xl border bg-white/5 px-3 py-2.5 text-sm text-white shadow-sm transition",
           "border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-500/50",

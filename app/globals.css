@@ -54,3 +54,23 @@ body {
     outline-offset: 0px;
   }
 }
+
+/* Fix select dropdown visibility */
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #1a1a1a;
+  color: white;
+  padding: 8px;
+}
+
+select option:hover {
+  background-color: #4f46e5;
+}
+
+select option:checked {
+  background-color: #4f46e5;
+  color: white;
+}
