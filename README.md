@@ -1,167 +1,155 @@
 # 🚀 TaskMate
 
-TaskMate is a comprehensive task management app designed for seamless interaction between task creators and acceptors. With features like role-based access, strict task lifecycle validation, advanced filtering, and more.
+TaskMate is a full-stack task management platform designed to enable a **student-driven micro-economy within hostels**, where users can post tasks, accept work, and complete them through a structured and secure workflow.
+
+---
+
+## 💡 Problem
+
+In hostel environments, students frequently need help with small tasks like cooking, cleaning, errands, or academic work.  
+
+However, there is **no structured, reliable system** to:
+- Request help  
+- Find trustworthy people  
+- Track task progress  
+- Ensure accountability  
+
+---
+
+## 🎯 Solution
+
+TaskMate provides a **controlled, state-driven system** where:
+
+- Users can post and accept tasks  
+- Each task follows a **strict lifecycle**  
+- Actions are **role-restricted** (Creator vs Acceptor)  
+- Communication is **secure and conditional**  
+- Payments are tracked before closure  
+
+---
+
+## 🧠 System Design (Core Highlight)
+
+TaskMate is built as a **state-driven workflow system** with strict validation.
+
+### 🔁 Task Lifecycle
+
+open → accepted → in_progress → work_done → payment_pending → payment_received → closed
+
+### ✅ Key Guarantees
+
+- No step skipping  
+- No unauthorized actions  
+- Clear ownership at each stage  
+- Automatic task closure after payment  
+
+---
+
+## 🔐 Access Control & Security
+
+- Role-based API protection (Creator / Acceptor)  
+- Chat access only after task acceptance  
+- Controlled state transitions via backend validation  
+
+---
+
+## 🔄 How It Works
+
+1. User posts a task with details (category, price, deadline, location)  
+2. Another user accepts the task  
+3. A private chat channel is unlocked between both users  
+4. Task progresses through lifecycle stages  
+5. Creator selects payment method  
+6. Acceptor confirms payment  
+7. Task is marked as closed by the creator.
 
 ---
 
 ## 🌟 Key Features
 
 ### 👤 Authentication
-- **Google Authentication** using NextAuth
-- Secure session handling
-- **Role-based access**: Creator / Acceptor
-
----
-
-### 🔁 Task Lifecycle (Core Logic)
-Each task follows a strict, validated lifecycle:
-
-`open` → `accepted` → `in_progress` → `work_done` → `payment_pending` → `payment_received` → `closed` (auto)
-
-This ensures:
-- No step skipping
-- No unauthorized actions
-- Clear responsibility at each stage
-
----
+- Google Authentication using NextAuth  
+- Secure session handling  
 
 ### 📝 Task Creation
-When creating a task, the creator provides:
-- **Title & description**
-- **Category**: Cooking, Cleaning, Drying, Academics, Others
-- **Price**
-- **Hostel & room number**
-- **Mandatory deadline**: Date + time
-
-Creator details are auto-attached from Google Auth:
-- Name
-- Email
-- Profile photo (with UI fallback if unavailable)
-
----
+- Title, description, category, price  
+- Hostel & room number  
+- Optional deadline (date + time)  
+- Auto-attached user details (name, email, avatar)  
 
 ### 📊 Dashboard
-Users can view:
-- **Posted tasks (as Creator)**
-- **Accepted tasks (as Acceptor)**
-- **Total earnings** from completed tasks
+- Posted tasks (as Creator)  
+- Accepted tasks (as Acceptor)
+- Active tasks 
+- Earnings tracking  
+- Real-time lifecycle updates  
 
-Each task displays:
-- Location (hostel & room)
-- Deadline
-- Category
-- Creator info with avatar
-- Current lifecycle status
+### 🔍 Browse Tasks
+- Filter by category & hostel  
+- Sort by nearest deadline  
+- Expired tasks auto-hidden  
+- "Expiring Soon" indicators  
 
----
-
-### 🔍 Browse Tasks (Advanced UX)
-The browse page supports:
-- **Filter by category**
-- **Filter by hostel**
-- **Sort by nearest deadline**
-- **Automatic hiding of expired tasks**
-- ⚠️ **"Expiring Soon"** badge for tasks near their deadline
-
-All filtering is done server-side for correctness and performance.
-
----
+### 💬 Conditional Messaging
+- Chat enabled only after task acceptance  
+- Online/offline status visibility  
 
 ### 💰 Payment Handling
-- Creator selects **payment method**: Cash / UPI / Online
-- Acceptor confirms **payment received**
-- System **automatically closes** the task afterward
+- Payment methods: Cash / UPI   
+- Payment status tracking  
 
 ---
 
 ## 🧱 Tech Stack
 
 ### Frontend
-- **Next.js** (App Router)
-- **React**
-- **Tailwind CSS**
+- Next.js (App Router)  
+- React
+- TypeScript
+- Tailwind CSS  
 
 ### Backend
-- **Next.js API Routes**
-- **Firebase Firestore**
-- **Firebase Admin SDK**
+- Next.js API Routes  
+- Firebase Firestore  
+- Firebase Admin SDK  
 
 ### Authentication
-- **NextAuth.js**
-- **Google Provider**
+- NextAuth.js  
+- Google Provider  
 
 ### Deployment
-- **Vercel**
+- Vercel  
 
 ---
 
 ## 🧠 Engineering Highlights
-- 🔒 Role-based API protection
-- 🕒 Strict lifecycle validation
-- 🔄 Firestore timestamp serialization for Next.js safety
-- 🧪 Defensive UI handling (null profile photos, old tasks)
-- ⚠️ Correct handling of async searchParams in App Router
-- ♻️ Auto-close logic implemented via controlled side-effects
 
-
----
-
-## 🚀 Local Setup
-
-1️⃣ **Clone the repo**
-```bash
-git clone https://github.com/manavi-24/task-mate.git
-cd task-mate
-```
-
-2️⃣ **Install dependencies**
-```bash
-npm install
-```
-
-3️⃣ **Environment variables**
-
-Create a `.env.local` file with the following:
-```env
-NEXTAUTH_SECRET=your_secret
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-FIREBASE_PROJECT_ID=your_project_id
-FIREBASE_CLIENT_EMAIL=your_client_email
-FIREBASE_PRIVATE_KEY=your_private_key
-```
-
-4️⃣ **Run locally**
-```bash
-npm run dev
-```
-
-App will run at:
-👉 [http://localhost:3000](http://localhost:3000)
+- Role-based API protection  
+- Strict lifecycle validation system  
+- State-driven architecture  
+- Firestore timestamp serialization handling  
+- Defensive UI (fallbacks, expired task handling)    
+- Server-side filtering for accuracy and performance  
 
 ---
 
-## 🔐 Security & Validation
+## 🚀 Future Improvements
 
-- Only **authenticated users** can create/accept tasks
-- **Creator cannot accept their own task**
-- Each API enforces correct task status
-- Firestore-safe data structures only (no class instances)
+- Ratings & trust system  
+- User analytics (earnings, completion rate)  
+- Smart task recommendations  
+- Real payment gateway integration (Razorpay/Stripe)  
 
 ---
 
-## 👩‍💻 Author
+## 🔗 Live Demo
 
-**Manavi Sharma**   
+https://task-mate-five-eta.vercel.app/
+
+---
+
+
+## 🙌 Author
+
+**Manavi Sharma**  
 NIT Hamirpur  
-
----
-
-## ⭐ Why TaskMate?
-
-TaskMate demonstrates:
-- Real-world state management
-- Backend + frontend integration
-- Secure auth flows
-- Thoughtful UX decisions
-- Production-grade Next.js patterns
