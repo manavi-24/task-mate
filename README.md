@@ -1,4 +1,4 @@
-## 🚀 TaskMate
+## 🏨 TaskMate
 
 
 TaskMate is a task coordination system built to model a hostel-level micro-economy, where users can post tasks, accept work, and complete them through a structured and secure workflow. Tasks move through strictly controlled states and user actions are governed by role-based constraints and validated transitions.
@@ -29,7 +29,7 @@ TaskMate provides a **controlled, state-driven system** where:
 
 ---
 
-## 🧠 System Design (Core Highlight)
+## 🧠 System Design 
 
 TaskMate is built as a **state-driven workflow system** with strict validation.
 
@@ -101,7 +101,7 @@ open → accepted → in_progress → work_done → payment_pending → payment_
 
 ---
 
-## 🧱 Tech Stack
+## 💻 Tech Stack
 
 ### Frontend
 - Next.js (App Router)  
@@ -123,7 +123,7 @@ open → accepted → in_progress → work_done → payment_pending → payment_
 
 ---
 
-## 🧠 Engineering Highlights
+## ⚙️ Engineering Highlights
 
 - Role-based API protection  
 - Strict lifecycle validation system  
